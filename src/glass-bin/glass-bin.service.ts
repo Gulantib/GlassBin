@@ -1,14 +1,15 @@
 import { HttpServer, HttpStatus, Injectable } from '@nestjs/common';
 import { GlassBin } from './glass-bin.model';
+const fs = require('fs');
 
 @Injectable()
 export class GlassBinService {
-  static glassBinList: GlassBin[] = [new GlassBin('1', 'test', -9.258, 18.562)
-      ,new GlassBin('2', 'test 2', 54.829, -15.178)
-      ,new GlassBin('3', '0 0', 0, 0)
-      ,new GlassBin('4', '10 -10', 10, -10)
-      ,new GlassBin('5', '10 10', 10, 10)];
+  static glassBinList: GlassBin[] = [];
 
+  constructor() {
+		this.loadGlassBinList();
+	}
+  
   findAll(): GlassBin[] {
     return GlassBinService.glassBinList;
   }
@@ -58,6 +59,7 @@ export class GlassBinService {
   ): GlassBin {
     var newId: number = Number(GlassBinService.glassBinList[GlassBinService.glassBinList.length-1].id) + 1;
 		GlassBinService.glassBinList.push(new GlassBin(newId.toString(), name, latitude, longitude));
+    this.saveGlassBinList();
     return GlassBinService.glassBinList[GlassBinService.glassBinList.length-1];
   }
 
@@ -73,4 +75,24 @@ export class GlassBinService {
     itemToUpdate.longitude = longitude;
     return itemToUpdate;
   }
+
+  loadGlassBinList() {
+		var dataFile = fs.readFileSync('src/glass-bin/glass-bin-list.json','utf8');
+		var glassBinListDataFile = JSON.parse(dataFile);
+		GlassBinService.glassBinList = [];
+		glassBinListDataFile.forEach(element => {
+			GlassBinService.glassBinList.push(new GlassBin(element.id, element.name, element.latitude, element.longitude));
+		});
+	}
+
+  saveGlassBinList() {
+    var dataFile = "[\n";
+    GlassBinService.glassBinList.forEach(element => { 
+      dataFile += "\t" + JSON.stringify(element) + ",\n";
+    })
+    dataFile = dataFile.substring(0, dataFile.length-2) + "\n";
+    dataFile += "]";
+
+    fs.writeFileSync('src/glass-bin/glass-bin-list.json', dataFile);
+	}
 }

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <!-- Nous chargeons les fichiers CDN de Leaflet. Le CSS AVANT le JS -->
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.1/dist/leaflet.css" integrity="sha512-Rksm5RenBEKSKFjgI3a41vrjkw4EVPlJ3+OiI65vTjIdo9brlAacEuKOiQ5OFh7cOI1bkDwLqdLw3Zg0cRJAAQ==" crossorigin="" />
+
+        <link rel="stylesheet" type="text/css" href="https://unpkg.com/leaflet.markercluster@1.3.0/dist/MarkerCluster.css" />
+        <link rel="stylesheet" type="text/css" href="https://unpkg.com/leaflet.markercluster@1.3.0/dist/MarkerCluster.Default.css" />
+        <style type="text/css">
+            #map{ /* la carte DOIT avoir une hauteur sinon elle n'apparaît pas */
+                height: 1000px;
+            }
+        </style>
+        <title>Carte</title>
+    </head>
+    <body>
+        <div id="map">
+	    <!-- Ici s'affichera la carte -->
+	</div>
+
+        <!-- Fichiers Javascript -->
+        <script src="https://unpkg.com/leaflet@1.3.1/dist/leaflet.js" integrity="sha512-/Nsx9X4HebavoBvEBuyp3I7od5tA0UzAxs+j83KgC8PU0kgB4XiK4Lfe4y4cgBtaRJQEIFCW+oC506aPT2L1zw==" crossorigin=""></script>
+		<script type='text/javascript' src='https://unpkg.com/leaflet.markercluster@1.3.0/dist/leaflet.markercluster.js'></script>
+		<script type="text/javascript">
+            // On initialise la latitude et la longitude de Paris (centre de la carte)
+            var lat = 45.779706;
+            var lon = 3.086492;
+            var macarte = null;
+			var glassBinList = [];
+			
+            // Fonction d'initialisation de la liste de bennes à verre
+			function getGlassBinList() {
+				let XHR = new XMLHttpRequest();
+
+				XHR.addEventListener("error", function(event) {
+					alert('Internal Server Error');
+				});
+
+				XHR.addEventListener("load", function(event) {
+					if (XHR.status != 200) {
+						alert('Internal Server Error');
+					} else {
+						glassBinList = JSON.parse(XHR.responseText);
+						initMap();
+					}
+				});
+
+				//call API
+				XHR.open("GET", "/glass-bin/items");
+				XHR.send();
+			}
+			
+			function addGlassBin(latitude, longitude) {
+				let XHR = new XMLHttpRequest();
+
+				XHR.addEventListener("error", function(event) {
+					alert('Internal Server Error');
+				});
+
+				XHR.addEventListener("load", function(event) {
+					if (XHR.status != 201) {
+						alert('Internal Server Error');
+					} else {
+						let newGlassBin = JSON.parse(XHR.responseText);
+						let marker = L.marker([newGlassBin.latitude, newGlassBin.longitude]).addTo(macarte);
+					}
+				});
+
+				//call API
+				let params = 'name=&latitude=' + latitude + '&longitude=' + longitude;
+				XHR.open("POST", "/glass-bin/item");
+				XHR.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+				XHR.send(params);
+			}
+			
+			function onMapClick(e) {
+				addGlassBin(e.latlng.lat, e.latlng.lng)
+			}
+			
+			function onMapContextMenu(e) {
+				L.popup()
+				.setLatLng(e.latlng)
+				.setContent('<h1>Hello !</h1>')
+				.addTo(macarte)
+				.openOn(macarte)
+			}
+			
+            // Fonction d'initialisation de la carte
+            function initMap() {
+                // Créer l'objet "macarte" et l'insèrer dans l'élément HTML qui a l'ID "map"
+                macarte = L.map('map').setView([lat, lon], 14);
+				markerClusters = L.markerClusterGroup(); 
+                // Leaflet ne récupère pas les cartes (tiles) sur un serveur par défaut. Nous devons lui préciser où nous souhaitons les récupérer. Ici, openstreetmap.fr
+                L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+                    // Il est toujours bien de laisser le lien vers la source des données
+                    attribution: 'données © <a href="//osm.org/copyright">OpenStreetMap</a>/ODbL - rendu <a href="//openstreetmap.fr">OSM France</a>',
+                    minZoom: 1,
+                    maxZoom: 20
+                }).addTo(macarte);
+				macarte.on('contextmenu', onMapClick);
+				// Nous parcourons la liste des villes
+				for (glassBin in glassBinList) {
+					var myIcon = L.icon({
+						iconUrl: 'https://s2.qwant.com/thumbr/0x380/f/0/1e6142b2558511740f5f9389e389babaf3ac7f051936fd8df1a883432f7072/3737612-bottle-glass-recycling_108909.png?u=https%3A%2F%2Fcdn.icon-icons.com%2Ficons2%2F1623%2FPNG%2F512%2F3737612-bottle-glass-recycling_108909.png&q=0&b=1&p=0&a=0',
+						iconSize: [25, 25],
+						iconAnchor: [12.5, 25],
+						popupAnchor: [-3, -76],
+					});
+					var marker = L.marker([glassBinList[glassBin].latitude, glassBinList[glassBin].longitude], { icon: myIcon }).addTo(macarte);
+                    marker.bindPopup(glassBin);
+                    markerClusters.addLayer(marker); // Nous ajoutons le marqueur aux groupes
+                }
+                macarte.addLayer(markerClusters);
+            }
+			
+			getGlassBinList();
+        </script>
+    </body>
+</html>
