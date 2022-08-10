@@ -32,7 +32,9 @@
             // On initialise la latitude et la longitude de Paris (centre de la carte)
             var lat = 45.779706;
             var lon = 3.086492;
-            var macarte = null;
+            var maCarte = null;
+			var monIcone = null;
+			var marker = null;
 			var glassBinList = [];
 			
             // Fonction d'initialisation de la liste de bennes à verre
@@ -69,7 +71,8 @@
 						alert('Internal Server Error');
 					} else {
 						let newGlassBin = JSON.parse(XHR.responseText);
-						let marker = L.marker([newGlassBin.latitude, newGlassBin.longitude]).addTo(macarte);
+						
+						displayGlassBin(newGlassBin.latitude, newGlassBin.longitude)
 					}
 				});
 
@@ -80,6 +83,12 @@
 				XHR.send(params);
 			}
 			
+			function displayGlassBin(latitude, longitude) {
+				var marker = L.marker([latitude, longitude], { icon: monIcone }).addTo(maCarte);
+				marker.bindPopup('Benne à verre');
+				markerClusters.addLayer(marker); // Nous ajoutons le marqueur aux groupes
+			}
+			
 			function onMapClick(e) {
 				addGlassBin(e.latlng.lat, e.latlng.lng)
 			}
@@ -88,18 +97,18 @@
 				L.popup()
 				.setLatLng(e.latlng)
 				.setContent('<h1>Hello !</h1>')
-				.addTo(macarte)
-				.openOn(macarte)
+				.addTo(maCarte)
+				.openOn(maCarte)
 			}
 			
 			function onLocationFound(e) {
 				console.log(e)
 				var radius = e.accuracy;
 
-				L.marker(e.latlng).addTo(macarte)
+				L.marker(e.latlng).addTo(maCarte)
 					.bindPopup("You are within " + Math.round(radius) + " meters from this point").openPopup();
 
-				L.circle(e.latlng, radius).addTo(macarte);
+				L.circle(e.latlng, radius).addTo(maCarte);
 			}
 
 			function onLocationError(e) {
@@ -108,8 +117,14 @@
 
 			// Fonction d'initialisation de la carte
             function initMap() {
-                // Créer l'objet "macarte" et l'insèrer dans l'élément HTML qui a l'ID "map"
-                macarte = L.map('map').setView([lat, lon], 16);
+                // Créer l'objet "maCarte" et l'insèrer dans l'élément HTML qui a l'ID "map"
+                maCarte = L.map('map').setView([lat, lon], 16);
+				monIcone = L.icon({
+						iconUrl: 'https://s2.qwant.com/thumbr/0x380/f/0/1e6142b2558511740f5f9389e389babaf3ac7f051936fd8df1a883432f7072/3737612-bottle-glass-recycling_108909.png?u=https%3A%2F%2Fcdn.icon-icons.com%2Ficons2%2F1623%2FPNG%2F512%2F3737612-bottle-glass-recycling_108909.png&q=0&b=1&p=0&a=0',
+						iconSize: [30, 30],
+						iconAnchor: [15, 30],
+						popupAnchor: [-3, -76],
+					});
 				markerClusters = L.markerClusterGroup(); 
                 // Leaflet ne récupère pas les cartes (tiles) sur un serveur par défaut. Nous devons lui préciser où nous souhaitons les récupérer. Ici, openstreetmap.fr
                 L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
@@ -117,27 +132,19 @@
                     attribution: 'données © <a href="//osm.org/copyright">OpenStreetMap</a>/ODbL - rendu <a href="//openstreetmap.fr">OSM France</a>',
                     minZoom: 1,
                     maxZoom: 20
-                }).addTo(macarte);
+                }).addTo(maCarte);
 
-				macarte.locate({setView: true, maxZoom: 16});
-				macarte.on('locationfound', onLocationFound);
-				macarte.on('locationerror', onLocationError);
+				maCarte.locate({setView: true, maxZoom: 16});
+				maCarte.on('locationfound', onLocationFound);
+				maCarte.on('locationerror', onLocationError);
 
-				macarte.on('contextmenu', onMapClick);
+				maCarte.on('contextmenu', onMapClick);
 
 				// Nous parcourons la liste des villes
 				for (glassBin in glassBinList) {
-					var myIcon = L.icon({
-						iconUrl: 'https://s2.qwant.com/thumbr/0x380/f/0/1e6142b2558511740f5f9389e389babaf3ac7f051936fd8df1a883432f7072/3737612-bottle-glass-recycling_108909.png?u=https%3A%2F%2Fcdn.icon-icons.com%2Ficons2%2F1623%2FPNG%2F512%2F3737612-bottle-glass-recycling_108909.png&q=0&b=1&p=0&a=0',
-						iconSize: [30, 30],
-						iconAnchor: [15, 30],
-						popupAnchor: [-3, -76],
-					});
-					var marker = L.marker([glassBinList[glassBin].latitude, glassBinList[glassBin].longitude], { icon: myIcon }).addTo(macarte);
-                    marker.bindPopup(glassBin);
-                    markerClusters.addLayer(marker); // Nous ajoutons le marqueur aux groupes
-                }
-                macarte.addLayer(markerClusters);
+					displayGlassBin(glassBinList[glassBin].latitude, glassBinList[glassBin].longitude);
+				}
+                maCarte.addLayer(markerClusters);
             }
 			
 			getGlassBinList();
