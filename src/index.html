@@ -74,10 +74,10 @@
 				});
 
 				//call API
-				// let params = 'name=&latitude=' + latitude + '&longitude=' + longitude;
-				// XHR.open("POST", "/glass-bin/item");
-				// XHR.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-				// XHR.send(params);
+				let params = 'name=&latitude=' + latitude + '&longitude=' + longitude;
+				XHR.open("POST", "/glass-bin/item");
+				XHR.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+				XHR.send(params);
 			}
 			
 			function onMapClick(e) {
