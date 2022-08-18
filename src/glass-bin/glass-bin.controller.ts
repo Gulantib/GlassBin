@@ -13,7 +13,7 @@ export class GlassBinController {
 
   @Get('/item/:id')
   findOne(
-		@Param('id') id: string
+		@Param('id') id: number
   ): GlassBin {
     return this.glassBinService.findOne(id);
   }
@@ -47,7 +47,7 @@ export class GlassBinController {
 
   @Put('/item/:id')
   updateItem(
-    @Param('id') id: string,
+    @Param('id') id: number,
     @Body('name') name: string,
     @Body('latitude') latitude: number,
     @Body('longitude') longitude: number

@@ -1,4 +1,6 @@
-import { HttpServer, HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { GlassBin } from './glass-bin.model';
 const fs = require('fs');
 
@@ -6,15 +8,17 @@ const fs = require('fs');
 export class GlassBinService {
   static glassBinList: GlassBin[] = [];
 
-  constructor() {
-		this.loadGlassBinList();
-	}
-  
+  constructor(
+    @InjectRepository(GlassBin) private readonly glassBinRepository: Repository<GlassBin>,
+  ) {
+    this.loadGlassBinListInDatabase();
+  }
+
   findAll(): GlassBin[] {
     return GlassBinService.glassBinList;
   }
 
-  findOne(id: string): GlassBin {
+  findOne(id: number): GlassBin {
 		return GlassBinService.glassBinList.find(element => { return element.id == id });
   }
 
@@ -23,7 +27,7 @@ export class GlassBinService {
     longitude: number
   ): GlassBin {
     var minimumLength: number = Number.POSITIVE_INFINITY;
-    var closestItemId: string;
+    var closestItemId: number;
     var currentItem: GlassBin;
     var lengthCurrentItem: number;
     
@@ -57,14 +61,15 @@ export class GlassBinService {
     latitude: number,
     longitude: number
   ): GlassBin {
-    var newId: number = Number(GlassBinService.glassBinList[GlassBinService.glassBinList.length-1].id) + 1;
-		GlassBinService.glassBinList.push(new GlassBin(newId.toString(), name, latitude, longitude));
-    this.saveGlassBinList();
+    //var newId: number = Number(GlassBinService.glassBinList[GlassBinService.glassBinList.length-1].id) + 1;
+		GlassBinService.glassBinList.push(new GlassBin(null, name, latitude, longitude));
+    this.saveGlassBinListOnFile();
+    this.saveGlassBinOnDatabase(GlassBinService.glassBinList[GlassBinService.glassBinList.length-1])
     return GlassBinService.glassBinList[GlassBinService.glassBinList.length-1];
   }
 
   updateItem(
-    id: string,
+    id: number,
     name: string,
     latitude: number,
     longitude: number
@@ -76,7 +81,13 @@ export class GlassBinService {
     return itemToUpdate;
   }
 
-  loadGlassBinList() {
+  loadGlassBinListInDatabase() {
+		this.glassBinRepository.find().then(
+      ((glassBinList: GlassBin[]) => GlassBinService.glassBinList = glassBinList)
+    );
+	}
+
+  loadGlassBinListInFile() {
 		var dataFile = fs.readFileSync('src/glass-bin/glass-bin-list.json','utf8');
 		var glassBinListDataFile = JSON.parse(dataFile);
 		GlassBinService.glassBinList = [];
@@ -85,7 +96,11 @@ export class GlassBinService {
 		});
 	}
 
-  saveGlassBinList() {
+  saveGlassBinOnDatabase(glassBin: GlassBin) {
+    this.glassBinRepository.save(glassBin);
+	}
+
+  saveGlassBinListOnFile() {
     var dataFile = "[\n";
     GlassBinService.glassBinList.forEach(element => { 
       dataFile += "\t" + JSON.stringify(element) + ",\n";
